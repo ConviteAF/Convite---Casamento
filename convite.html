@@ -74,7 +74,7 @@ footer{text-align:center;color:var(--mut);padding:2.5rem 1rem;font-size:.9rem}
     <p id="a1">Calemba 2, depois da Vala, Rua 1, antes da Polícia.</p>
     <div class="row"><a class="btn sm" data-map="a1" target="_blank" rel="noopener">Google Maps</a><a class="btn o sm" data-waze="a1" target="_blank" rel="noopener">Waze</a><button class="btn o sm" data-copy="a1">Copiar endereço</button></div></div>
   <div class="card"><h3>Copo de água · Espaço FL Cantinho</h3>
-    <p id="a2">Via Expresso do Kicuxi, sentido Benfica/Zango, entre a Rua do Resort Bantu e o Casino. Rua nº 2, a 700 metros.</p>
+    <p id="a2">Via Expressa do Kicuxi, sentido Benfica/Zango, entre a Rua do Resort Bantu e o Casino. Rua nº 2, a 700 metros.</p>
     <div class="row"><a class="btn sm" data-map="a2" target="_blank" rel="noopener">Google Maps</a><a class="btn o sm" data-waze="a2" target="_blank" rel="noopener">Waze</a><button class="btn o sm" data-copy="a2">Copiar endereço</button></div></div>
 </section>
 <section id="rsvpS">
@@ -85,7 +85,7 @@ footer{text-align:center;color:var(--mut);padding:2.5rem 1rem;font-size:.9rem}
     <div class="chk"><input type="checkbox" id="e1"><label for="e1" style="margin:0;font-weight:400">Cerimónia civil e religiosa (14:00)</label></div>
     <div class="chk"><input type="checkbox" id="e2"><label for="e2" style="margin:0;font-weight:400">Copo de água (20:00)</label></div>
     <div class="chk"><input type="checkbox" id="no"><label for="no" style="margin:0;font-weight:400">Infelizmente não poderei comparecer</label></div>
-    <label for="n">Acompanhantes (máx. <span id="mx">0</span>)</label><select id="n"></select>
+    <label for="n">Acompanhante (máx. <span id="mx">0</span>; cada convite vale para no máximo 2 pessoas)</label><select id="n"></select>
     <div id="names"></div>
     <label for="diet">Restrições alimentares</label><input id="diet" maxlength="150">
     <label for="note">Mensagem aos noivos</label><textarea id="note" rows="3" maxlength="300"></textarea>
@@ -96,7 +96,14 @@ footer{text-align:center;color:var(--mut);padding:2.5rem 1rem;font-size:.9rem}
 </section>
 <section>
   <h2>Informações úteis</h2>
-  <p>Dress code: elegante. Sugerimos tons suaves, evitando branco. A cerimónia começa às 14:00 e o copo de água às 20:00. Chegue com 30 minutos de antecedência à cerimónia. Para dúvidas, fale com os noivos pelo <a href="https://wa.me/244939855438" target="_blank" rel="noopener" style="color:var(--wine)">WhatsApp</a>.</p>
+  <ul style="padding-left:1.2rem;margin:0">
+    <li><b>Dress code:</b> elegante. Sugerimos tons suaves, evitando branco.</li>
+    <li><b>Horários:</b> a cerimónia começa às 14:00 e o copo de água às 20:00. Chegue com 30 minutos de antecedência à cerimónia.</li>
+    <li><b>Cada convite é para no máximo 2 pessoas</b> (o convidado e um acompanhante).</li>
+    <li><b>Não é permitido levar crianças.</b></li>
+    <li><b>Acesso ao salão:</b> só entram os convidados que confirmaram presença, mediante a apresentação do convite, impresso ou guardado no telemóvel. Depois de confirmar, guarde ou imprima o seu convite.</li>
+    <li><b>Dúvidas:</b> fale com os noivos pelo <a href="https://wa.me/244939855438" target="_blank" rel="noopener" style="color:var(--wine)">WhatsApp</a>.</li>
+  </ul>
 </section>
 <footer>Agnaldo &amp; Fátima · 31.10.2026<br>Contactos: <a href="tel:+244921545634" style="color:inherit">921 545 634</a> · <a href="tel:+244925303165" style="color:inherit">925 303 165</a><br><a href="https://wa.me/244939855438" target="_blank" rel="noopener" style="color:inherit">WhatsApp 939 855 438</a><br><a href="painel.html" style="color:inherit;opacity:.7">Área dos noivos</a></footer>
 <script src="config.js"></script>
@@ -107,7 +114,7 @@ const COVER='data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAcFBQYFBAcG
 const WA='244939855438';
 const P=new URLSearchParams(location.search);
 const NAME=(P.get('n')||'').trim().slice(0,80);
-const SEATS=Math.min(20,Math.max(1,parseInt(P.get('l'))||3));
+const SEATS=Math.min(2,Math.max(1,parseInt(P.get('l'))||2)); // máximo 2 pessoas por convite
 const CODE=(P.get('c')||'').replace(/[^A-Za-z0-9]/g,'').slice(0,20);
 const URL_=typeof SCRIPT_URL==='string'?SCRIPT_URL:'';
 let R=null;
@@ -150,7 +157,7 @@ $('#f').onsubmit=e=>{e.preventDefault();
  if(names.some(x=>!x))return err.textContent='Indique o nome de cada acompanhante.';
  R={nome,no,e1,e2,names,diet:$('#diet').value.trim(),note:$('#note').value.trim()};
  err.textContent='';$('#f').classList.add('hide');const t=$('#thanks');t.classList.remove('hide');
- t.innerHTML=`<h3>${no?'Obrigado por nos avisar':URL_?'Obrigado!':'Quase pronto!'}</h3><p id="sendMsg">${URL_?'A enviar a sua resposta...':'Falta um passo: toque no botão para enviar a sua resposta aos noivos pelo WhatsApp. A resposta só conta depois de enviada.'}</p><div class="row"><a class="btn" target="_blank" rel="noopener" href="https://wa.me/${WA}?text=${encodeURIComponent(buildMsg(R))}">${URL_?'Avisar também por WhatsApp':'Enviar pelo WhatsApp'}</a>${no?'':'<button class="btn o sm" id="pr" type="button">Imprimir o meu convite</button>'}<button class="btn o sm" id="edit" type="button">Alterar resposta</button></div>`;
+ t.innerHTML=`<h3>${no?'Obrigado por nos avisar':URL_?'Obrigado!':'Quase pronto!'}</h3><p id="sendMsg">${URL_?'A enviar a sua resposta...':'Falta um passo: toque no botão para enviar a sua resposta aos noivos pelo WhatsApp. A resposta só conta depois de enviada.'}</p>${no?'':'<p><b>Importante:</b> o acesso ao salão é feito com este convite. Toque em "Guardar / imprimir o meu convite" e escolha "Guardar como PDF" ou imprima. Não é permitido levar crianças.</p>'}<div class="row"><a class="btn" target="_blank" rel="noopener" href="https://wa.me/${WA}?text=${encodeURIComponent(buildMsg(R))}">${URL_?'Avisar também por WhatsApp':'Enviar pelo WhatsApp'}</a>${no?'':'<button class="btn sm" id="pr" type="button">Guardar / imprimir o meu convite</button>'}<button class="btn o sm" id="edit" type="button">Alterar resposta</button></div>`;
  if(URL_)fetch(URL_,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({nome:R.nome,code:CODE,no:R.no,e1:R.e1,e2:R.e2,names:R.names,diet:R.diet,note:R.note})})
   .then(()=>{$('#sendMsg').textContent='A sua resposta foi enviada aos noivos. Obrigado!'}).catch(()=>{$('#sendMsg').textContent='Não foi possível enviar automaticamente. Use o botão do WhatsApp abaixo.'});
  if(!no)$('#pr').onclick=printInvite;
@@ -160,7 +167,7 @@ $('#f').onsubmit=e=>{e.preventDefault();
 function printInvite(){if(!R||R.no)return;
  const w=window.open('','_blank');if(!w)return alert('Permita janelas pop-up para imprimir.');
  const n=1+R.names.length;
- w.document.write(`<!DOCTYPE html><meta charset="utf-8"><title>Convite · ${esc(R.nome)}</title><style>@page{size:A5 portrait;margin:0}*{box-sizing:border-box}body{margin:0;font:13px/1.45 Georgia,serif;color:#1F2A24;text-align:center;-webkit-print-color-adjust:exact;print-color-adjust:exact}.p{width:148mm;min-height:210mm;margin:0 auto;border:1px solid #9C7A3F}img{width:100%;height:88mm;object-fit:cover;object-position:50% 10%;display:block}.t{padding:6mm 8mm}h1{margin:0;font:italic 500 34px Georgia,serif;color:#5A1A2B}h2{margin:2px 0;font-size:22px}.s,.k{color:#555;font-size:11px;margin:2px 0}p{margin:5px 0}</style><div class="p"><img src="${COVER}" alt=""><div class="t"><h1>Agnaldo &amp; Fátima</h1><p class="s">têm a alegria de convidar</p><h2>${esc(R.nome)}</h2><p class="s">${n} pessoa(s) confirmada(s)</p><p><b>Sábado, 31 de outubro de 2026</b></p>${R.e1?'<p><b>Cerimónia civil e religiosa</b><br>14:00 · Calemba 2, depois da Vala, Rua 1, antes da Polícia</p>':''}${R.e2?'<p><b>Copo de água</b><br>20:00 · Espaço FL Cantinho, Via Expresso do Kicuxi, sentido Benfica/Zango, entre a Rua do Resort Bantu e o Casino, Rua nº 2, a 700 metros</p>':''}<p class="k">Dress code elegante</p><p class="k">Contactos: 921 545 634 · 925 303 165</p></div></div><script>onload=()=>setTimeout(()=>print(),300)<\/script>`);w.document.close()}
+ w.document.write(`<!DOCTYPE html><meta charset="utf-8"><title>Convite · ${esc(R.nome)}</title><style>@page{size:A5 portrait;margin:0}*{box-sizing:border-box}body{margin:0;font:13px/1.45 Georgia,serif;color:#1F2A24;text-align:center;-webkit-print-color-adjust:exact;print-color-adjust:exact}.p{width:148mm;min-height:210mm;margin:0 auto;border:1px solid #9C7A3F}img{width:100%;height:88mm;object-fit:cover;object-position:50% 10%;display:block}.t{padding:6mm 8mm}h1{margin:0;font:italic 500 34px Georgia,serif;color:#5A1A2B}h2{margin:2px 0;font-size:22px}.s,.k{color:#555;font-size:11px;margin:2px 0}p{margin:5px 0}</style><div class="p"><img src="${COVER}" alt=""><div class="t"><h1>Agnaldo &amp; Fátima</h1><p class="s">têm a alegria de convidar</p><h2>${esc(R.nome)}</h2><p class="s">${n} pessoa(s) confirmada(s)</p><p><b>Sábado, 31 de outubro de 2026</b></p>${R.e1?'<p><b>Cerimónia civil e religiosa</b><br>14:00 · Calemba 2, depois da Vala, Rua 1, antes da Polícia</p>':''}${R.e2?'<p><b>Copo de água</b><br>20:00 · Espaço FL Cantinho, Via Expressa do Kicuxi, sentido Benfica/Zango, entre a Rua do Resort Bantu e o Casino, Rua nº 2, a 700 metros</p>':''}<p class="k">Dress code elegante · Não é permitido levar crianças</p><p class="k"><b>Convite pessoal: apresente-o à entrada do salão.</b>${CODE?` Código ${esc(CODE)}`:''}</p><p class="k">Contactos: 921 545 634 · 925 303 165</p></div></div><script>onload=()=>setTimeout(()=>print(),300)<\/script>`);w.document.close()}
 drawNames();
 </script>
 </body>
