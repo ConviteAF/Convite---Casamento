@@ -5,23 +5,32 @@
 <style>body{font:16px/1.5 system-ui,sans-serif;max-width:760px;margin:0 auto;padding:1rem;background:#EEF1EC;color:#1F2A24}h1{color:#5A1A2B}textarea,input{width:100%;padding:.6rem;border:1px solid #bbb;border-radius:8px;font:inherit}button,a.b{display:inline-block;border:0;border-radius:999px;padding:.5rem 1rem;background:#9C7A3F;color:#fff;font:inherit;text-decoration:none;cursor:pointer;margin:.2rem .2rem 0 0}button.o{background:none;border:1.5px solid #9C7A3F;color:#7a5f2d}.r{background:#fff;border:1px solid #ccc;border-radius:10px;padding:.7rem;margin:.6rem 0;word-break:break-all}small{color:#555}</style></head>
 <body>
 <h1>Links dos convites</h1>
-<p>Escreva <b>um convidado por linha</b>, no formato <code>nome;lugares;telefone</code>. Lugares e telefone são opcionais.<br><small>Exemplo: João e família;4;244923000000</small></p>
+<p>Escreva <b>um convidado por linha</b>: <code>nome;lugares;telefone</code>. Lugares e telefone são opcionais.<br><small>Exemplo: João e família;4;244923000000</small></p>
 <textarea id="list" rows="8" placeholder="João e família;4;244923000000&#10;Maria Silva;2"></textarea>
 <p><label for="base">Endereço do convite</label><input id="base"></p>
+<p><label for="pin">PIN dos noivos (regista a lista no painel, para calcular os pendentes)</label><input id="pin" type="password" autocomplete="off"></p>
 <button id="go">Gerar links</button> <button class="o" id="all">Copiar todos</button>
+<p id="reg" aria-live="polite"></p>
 <div id="out"></div>
+<script src="config.js"></script>
 <script>
 const $=s=>document.querySelector(s);
-const DEF='https://conviteaf.github.io/Convite---Casamento/convite.html';
-$('#base').value=location.protocol.startsWith('http')?location.origin+location.pathname.replace(/[^/]*$/,'')+'convite.html':DEF;
+const U=typeof SCRIPT_URL==='string'?SCRIPT_URL:'';
+$('#base').value=location.protocol.startsWith('http')?location.origin+location.pathname.replace(/[^/]*$/,'')+'convite.html':'https://conviteaf.github.io/Convite---Casamento/convite.html';
 try{$('#list').value=localStorage.getItem('lista')||''}catch(e){}
+const SAFE='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+const fnv=s=>{let h=2166136261;for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619)>>>0}return h};
+const enc=(h,n)=>{let c='';for(let i=0;i<n;i++){c+=SAFE[h&31];h>>>=5}return c};
+const codeOf=name=>{const s=name.toLowerCase().trim();return enc(fnv(s),6)+enc(fnv(s+'#'),2)}; // estável: o mesmo nome dá sempre o mesmo código
 let all=[];
 $('#go').onclick=()=>{
- const base=$('#base').value.trim();all=[];$('#out').innerHTML='';
+ const base=$('#base').value.trim();all=[];$('#out').innerHTML='';const conv=[];
  try{localStorage.setItem('lista',$('#list').value)}catch(e){}
  for(const line of $('#list').value.split('\n')){
   const [name,seats,phone]=line.split(';').map(x=>(x||'').trim());if(!name)continue;
-  const link=base+'?n='+encodeURIComponent(name)+(parseInt(seats)?'&l='+parseInt(seats):'');
+  const code=codeOf(name),n=parseInt(seats)||0;
+  const link=base+'?n='+encodeURIComponent(name)+(n?'&l='+n:'')+'&c='+code;
+  conv.push({codigo:code,nome:name,lugares:n||3,telefone:phone.replace(/\D/g,'')});
   const msg=`Olá ${name}! Convidamo-vos para o casamento de Agnaldo e Fátima, a 31 de outubro de 2026. Abra o seu convite e confirme a presença aqui: ${link}`;
   all.push(name+' — '+link);
   const d=document.createElement('div');d.className='r';
@@ -32,6 +41,11 @@ $('#go').onclick=()=>{
   const c=document.createElement('button');c.className='o';c.textContent='Copiar link';
   c.onclick=async()=>{try{await navigator.clipboard.writeText(link);c.textContent='Copiado'}catch(e){c.textContent='Copie à mão'}};d.append(c);
   $('#out').append(d)}
- if(!all.length)$('#out').textContent='Escreva pelo menos um nome.'};
+ if(!all.length){$('#out').textContent='Escreva pelo menos um nome.';return}
+ const reg=$('#reg');
+ if(!U)reg.textContent='';
+ else if(!$('#pin').value)reg.textContent='Escreva o PIN para registar esta lista no painel dos noivos.';
+ else fetch(U,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action:'lista',pin:$('#pin').value,convidados:conv})})
+  .then(()=>reg.textContent='Lista enviada ao painel ('+conv.length+' convites). Confira no painel.').catch(()=>reg.textContent='Não foi possível enviar a lista ao painel.')};
 $('#all').onclick=async()=>{try{await navigator.clipboard.writeText(all.join('\n'));$('#all').textContent='Copiado'}catch(e){}};
 </script></body></html>

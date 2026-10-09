@@ -98,7 +98,8 @@ footer{text-align:center;color:var(--mut);padding:2.5rem 1rem;font-size:.9rem}
   <h2>Informações úteis</h2>
   <p>Dress code: elegante. Sugerimos tons suaves, evitando branco. A cerimónia começa às 14:00 e o copo de água às 20:00. Chegue com 30 minutos de antecedência à cerimónia. Para dúvidas, fale com os noivos pelo <a href="https://wa.me/244939855438" target="_blank" rel="noopener" style="color:var(--wine)">WhatsApp</a>.</p>
 </section>
-<footer>Agnaldo &amp; Fátima · 31.10.2026<br>Contactos: <a href="tel:+244921545634" style="color:inherit">921 545 634</a> · <a href="tel:+244925303165" style="color:inherit">925 303 165</a><br><a href="https://wa.me/244939855438" target="_blank" rel="noopener" style="color:inherit">WhatsApp 939 855 438</a></footer>
+<footer>Agnaldo &amp; Fátima · 31.10.2026<br>Contactos: <a href="tel:+244921545634" style="color:inherit">921 545 634</a> · <a href="tel:+244925303165" style="color:inherit">925 303 165</a><br><a href="https://wa.me/244939855438" target="_blank" rel="noopener" style="color:inherit">WhatsApp 939 855 438</a><br><a href="painel.html" style="color:inherit;opacity:.7">Área dos noivos</a></footer>
+<script src="config.js"></script>
 <script>
 const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -107,6 +108,8 @@ const WA='244939855438';
 const P=new URLSearchParams(location.search);
 const NAME=(P.get('n')||'').trim().slice(0,80);
 const SEATS=Math.min(20,Math.max(1,parseInt(P.get('l'))||3));
+const CODE=(P.get('c')||'').replace(/[^A-Za-z0-9]/g,'').slice(0,20);
+const URL_=typeof SCRIPT_URL==='string'?SCRIPT_URL:'';
 let R=null;
 $('#hero').style.backgroundImage=`url(${COVER})`;
 // Contagem decrescente (fuso de Luanda)
@@ -147,7 +150,9 @@ $('#f').onsubmit=e=>{e.preventDefault();
  if(names.some(x=>!x))return err.textContent='Indique o nome de cada acompanhante.';
  R={nome,no,e1,e2,names,diet:$('#diet').value.trim(),note:$('#note').value.trim()};
  err.textContent='';$('#f').classList.add('hide');const t=$('#thanks');t.classList.remove('hide');
- t.innerHTML=`<h3>${no?'Obrigado por nos avisar':'Quase pronto!'}</h3><p>Falta um passo: toque no botão para enviar a sua resposta aos noivos pelo WhatsApp. A resposta só conta depois de enviada.</p><div class="row"><a class="btn" target="_blank" rel="noopener" href="https://wa.me/${WA}?text=${encodeURIComponent(buildMsg(R))}">Enviar pelo WhatsApp</a>${no?'':'<button class="btn o sm" id="pr" type="button">Imprimir o meu convite</button>'}<button class="btn o sm" id="edit" type="button">Alterar resposta</button></div>`;
+ t.innerHTML=`<h3>${no?'Obrigado por nos avisar':URL_?'Obrigado!':'Quase pronto!'}</h3><p id="sendMsg">${URL_?'A enviar a sua resposta...':'Falta um passo: toque no botão para enviar a sua resposta aos noivos pelo WhatsApp. A resposta só conta depois de enviada.'}</p><div class="row"><a class="btn" target="_blank" rel="noopener" href="https://wa.me/${WA}?text=${encodeURIComponent(buildMsg(R))}">${URL_?'Avisar também por WhatsApp':'Enviar pelo WhatsApp'}</a>${no?'':'<button class="btn o sm" id="pr" type="button">Imprimir o meu convite</button>'}<button class="btn o sm" id="edit" type="button">Alterar resposta</button></div>`;
+ if(URL_)fetch(URL_,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({nome:R.nome,code:CODE,no:R.no,e1:R.e1,e2:R.e2,names:R.names,diet:R.diet,note:R.note})})
+  .then(()=>{$('#sendMsg').textContent='A sua resposta foi enviada aos noivos. Obrigado!'}).catch(()=>{$('#sendMsg').textContent='Não foi possível enviar automaticamente. Use o botão do WhatsApp abaixo.'});
  if(!no)$('#pr').onclick=printInvite;
  $('#edit').onclick=()=>{t.classList.add('hide');$('#f').classList.remove('hide')};
  t.scrollIntoView()};
