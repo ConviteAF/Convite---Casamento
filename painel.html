@@ -34,7 +34,7 @@ function analisar(j){
   veg:L.filter(x=>/vegetar|vegan/i.test(x.dieta||'')).length,alerg:L.filter(x=>/alerg|gl[uú]ten|lact|amendoim|marisco/i.test(x.dieta||'')).length}}
 let PIN='',A=null,timer=null;
 function mostrar(j){A=analisar(j);
- const b=[['Convites enviados',A.convites||'—'],['Responderam',A.respondidos],['Vão',A.vao],['Não vão',A.nao],['Pendentes',A.pendentes??'—'],['Pessoas confirmadas',A.pessoas],['Pessoas na cerimónia',A.cer],['Pessoas no copo de água',A.copo],['Vegetarianos',A.veg],['Com alergias',A.alerg]];
+ const b=[['Convites registados',(A.convites||0)+' de 85'],['Responderam',A.respondidos],['Vão',A.vao],['Não vão',A.nao],['Pendentes',A.pendentes??'—'],['Pessoas confirmadas',A.pessoas+' de 170'],['Pessoas na cerimónia',A.cer],['Pessoas no copo de água',A.copo],['Vegetarianos',A.veg],['Com alergias',A.alerg]];
  $('#st').innerHTML=b.map(([l,n])=>`<div><b>${n}</b>${l}</div>`).join('');
  const base=location.origin+location.pathname.replace(/[^/]*$/,'')+'convite.html';
  $('#pend').innerHTML=A.C.length?('<tr><th>Convidado</th><th>Lugares</th><th></th></tr>'+(A.pend.map(c=>{

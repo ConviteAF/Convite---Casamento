@@ -5,12 +5,13 @@
 <style>body{font:16px/1.5 system-ui,sans-serif;max-width:760px;margin:0 auto;padding:1rem;background:#EEF1EC;color:#1F2A24}h1{color:#5A1A2B}textarea,input{width:100%;padding:.6rem;border:1px solid #bbb;border-radius:8px;font:inherit}button,a.b{display:inline-block;border:0;border-radius:999px;padding:.5rem 1rem;background:#9C7A3F;color:#fff;font:inherit;text-decoration:none;cursor:pointer;margin:.2rem .2rem 0 0}button.o{background:none;border:1.5px solid #9C7A3F;color:#7a5f2d}.r{background:#fff;border:1px solid #ccc;border-radius:10px;padding:.7rem;margin:.6rem 0;word-break:break-all}small{color:#555}</style></head>
 <body>
 <h1>Links dos convites</h1>
-<p>Escreva <b>um convidado por linha</b>: <code>nome;lugares;telefone</code>. Lugares e telefone são opcionais.<br><small>Exemplo: João e família;4;244923000000</small></p>
-<textarea id="list" rows="8" placeholder="João e família;4;244923000000&#10;Maria Silva;2"></textarea>
+<p>Escreva <b>um convidado por linha</b>: <code>nome;lugares;telefone</code>. Lugares (1 ou 2; máximo 2 por convite) e telefone são opcionais. Sem lugares, conta 2.<br><small>Exemplo: João e família;2;244923000000</small></p>
+<textarea id="list" rows="8" placeholder="João e família;2;244923000000&#10;Maria Silva;1"></textarea>
 <p><label for="base">Endereço do convite</label><input id="base"></p>
 <p><label for="pin">PIN dos noivos (regista a lista no painel, para calcular os pendentes)</label><input id="pin" type="password" autocomplete="off"></p>
 <button id="go">Gerar links</button> <button class="o" id="all">Copiar todos</button>
 <p id="reg" aria-live="polite"></p>
+<p id="cnt" aria-live="polite"></p>
 <div id="out"></div>
 <script src="config.js"></script>
 <script>
@@ -24,13 +25,17 @@ const enc=(h,n)=>{let c='';for(let i=0;i<n;i++){c+=SAFE[h&31];h>>>=5}return c};
 const codeOf=name=>{const s=name.toLowerCase().trim();return enc(fnv(s),6)+enc(fnv(s+'#'),2)}; // estável: o mesmo nome dá sempre o mesmo código
 let all=[];
 $('#go').onclick=()=>{
- const base=$('#base').value.trim();all=[];$('#out').innerHTML='';const conv=[];
+ const base=$('#base').value.trim();all=[];$('#out').innerHTML='';$('#cnt').textContent='';const conv=[];
+ const nomes=$('#list').value.split('\n').map(l=>l.split(';')[0].trim().toLowerCase()).filter(Boolean);
+ if(new Set(nomes).size>85){$('#cnt').textContent='A lista tem '+new Set(nomes).size+' convites. O limite é 85 convites (170 pessoas). Retire '+(new Set(nomes).size-85)+' e tente de novo.';return}
+ const vistos=new Set(),rep=[];
  try{localStorage.setItem('lista',$('#list').value)}catch(e){}
  for(const line of $('#list').value.split('\n')){
   const [name,seats,phone]=line.split(';').map(x=>(x||'').trim());if(!name)continue;
-  const code=codeOf(name),n=parseInt(seats)||0;
-  const link=base+'?n='+encodeURIComponent(name)+(n?'&l='+n:'')+'&c='+code;
-  conv.push({codigo:code,nome:name,lugares:n||3,telefone:phone.replace(/\D/g,'')});
+  if(vistos.has(name.toLowerCase())){rep.push(name);continue}vistos.add(name.toLowerCase());
+  const code=codeOf(name),n=Math.min(2,Math.max(1,parseInt(seats)||2));
+  const link=base+'?n='+encodeURIComponent(name)+'&l='+n+'&c='+code;
+  conv.push({codigo:code,nome:name,lugares:n,telefone:phone.replace(/\D/g,'')});
   const msg=`Olá ${name}! Convidamo-vos para o casamento de Agnaldo e Fátima, a 31 de outubro de 2026. Abra o seu convite e confirme a presença aqui: ${link}`;
   all.push(name+' — '+link);
   const d=document.createElement('div');d.className='r';
@@ -42,6 +47,7 @@ $('#go').onclick=()=>{
   c.onclick=async()=>{try{await navigator.clipboard.writeText(link);c.textContent='Copiado'}catch(e){c.textContent='Copie à mão'}};d.append(c);
   $('#out').append(d)}
  if(!all.length){$('#out').textContent='Escreva pelo menos um nome.';return}
+ $('#cnt').textContent=conv.length+' de 85 convites (até '+conv.length*2+' pessoas; limite total 170)'+(rep.length?'. Nomes repetidos ignorados: '+rep.join(', ')+' (acrescente o apelido para os distinguir).':'');
  const reg=$('#reg');
  if(!U)reg.textContent='';
  else if(!$('#pin').value)reg.textContent='Escreva o PIN para registar esta lista no painel dos noivos.';
