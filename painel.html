@@ -16,6 +16,7 @@ table{width:100%;border-collapse:collapse;background:#fff;font-size:.9rem}th,td{
 <div id="main" class="hide">
  <button id="rf">Atualizar</button><button class="o" id="csv">Descarregar respostas (CSV)</button> <small id="upd"></small>
  <div class="st" id="st"></div>
+ <h2>Lista completa de convidados</h2><div class="w"><table id="todos"></table></div>
  <h2>Pendentes (ainda não responderam)</h2><div class="w"><table id="pend"></table></div>
  <h2>Respostas</h2><div class="w"><table id="resp"></table></div>
 </div>
@@ -42,6 +43,12 @@ function mostrar(j){A=analisar(j);
    const t=`Olá ${c.nome}! Ainda não recebemos a sua resposta ao convite para o casamento de Agnaldo e Fátima (31 de outubro, 14:00). Confirme aqui: ${link}`;
    return `<tr><td>${esc(c.nome)}</td><td>${esc(c.lugares)}</td><td><a class="b" target="_blank" rel="noopener" href="https://wa.me/${esc(c.telefone)}?text=${encodeURIComponent(t)}">Lembrar</a></td></tr>`}).join('')||'<tr><td colspan="3">Todos já responderam.</td></tr>'))
   :'<tr><td>Registe a lista no gerador de links (com o PIN) para ver os pendentes.</td></tr>';
+ const rc=new Map(),rn=new Map();A.L.forEach(x=>{if(x.codigo)rc.set(String(x.codigo).toLowerCase(),x);rn.set(String(x.nome).toLowerCase(),x)});
+ const est=r=>r?(r.vai?'<span class="ok">Vai ('+r.pessoas+')</span>':'<span class="no">Não vai</span>'):'<span>Pendente</span>';
+ const usados=new Set();
+ const linhasT=A.C.map(c=>{const r=rc.get(String(c.codigo).toLowerCase())||rn.get(String(c.nome).toLowerCase());if(r)usados.add(r);return `<tr><td>${esc(c.nome)}</td><td>${esc(c.lugares)}</td><td>${est(r)}</td></tr>`});
+ A.L.filter(r=>!usados.has(r)).forEach(r=>linhasT.push(`<tr><td>${esc(r.nome)} <small>(fora da lista)</small></td><td></td><td>${est(r)}</td></tr>`));
+ $('#todos').innerHTML='<tr><th>Convidado</th><th>Lugares</th><th>Estado</th></tr>'+(linhasT.join('')||'<tr><td colspan="3">Ainda sem convidados.</td></tr>');
  $('#resp').innerHTML='<tr><th>Nome</th><th>Estado</th><th>Pessoas</th><th>Cerimónia</th><th>Copo de água</th><th>Acompanhantes</th><th>Restrições / mensagem</th></tr>'+
   (A.L.map(x=>`<tr><td>${esc(x.nome)}</td><td class="${x.vai?'ok':'no'}">${x.vai?'Vai':'Não vai'}</td><td>${x.pessoas}</td><td>${x.e1?'Sim':''}</td><td>${x.e2?'Sim':''}</td><td>${esc(x.acomp)}</td><td>${esc(x.dieta)}${x.dieta&&x.nota?' · ':''}${esc(x.nota)}</td></tr>`).join('')||'<tr><td colspan="7">Ainda sem respostas.</td></tr>');
  $('#upd').textContent='Atualizado às '+new Date().toLocaleTimeString('pt-PT')}

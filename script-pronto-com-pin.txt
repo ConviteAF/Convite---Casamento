@@ -1,0 +1,78 @@
+// Recebe as respostas do convite e guarda-as numa folha do Google.
+// 1) Escolha um PIN (6+ caracteres) para ver os totais:
+const PIN = 'af31102026';
+const ABA = 'Respostas';
+const MAX_CONVITES = 85;   // limite total: 85 convites (máximo 170 pessoas)
+const ABA_CONV = 'Convidados';
+const CAB = ['Data', 'Nome', 'Código', 'Vai?', 'Cerimónia', 'Copo de água', 'Pessoas', 'Acompanhantes', 'Restrições', 'Mensagem', 'Chave'];
+
+function aba_() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let s = ss.getSheetByName(ABA);
+  if (!s) { s = ss.insertSheet(ABA); s.appendRow(CAB); }
+  return s;
+}
+// Evita que texto começado por = + - @ seja tratado como fórmula
+function seguro_(v, n) {
+  v = String(v == null ? '' : v).slice(0, n);
+  return /^[=+\-@]/.test(v) ? "'" + v : v;
+}
+function saida_(o) {
+  return ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON);
+}
+// Guarda (ou atualiza) a resposta de um convidado
+function doPost(e) {
+  const lock = LockService.getScriptLock();
+  lock.waitLock(15000);
+  try {
+    const d = JSON.parse(e.postData.contents);
+    if (d.action === 'lista') {                       // lista de convidados enviada pelo gerador de links
+      if (PIN === 'TROQUE-ESTE-PIN' || d.pin !== PIN) return saida_({ erro: 'PIN incorreto' });
+      const ss = SpreadsheetApp.getActiveSpreadsheet();
+      const c = ss.getSheetByName(ABA_CONV) || ss.insertSheet(ABA_CONV);
+      // JUNTA à lista que já existe (não apaga os nomes antigos): mesmo código = atualiza, código novo = acrescenta
+      const antigos = c.getLastRow() > 1 ? c.getRange(2, 1, c.getLastRow() - 1, 4).getValues() : [];
+      const mapa = {}; const ordem = [];
+      antigos.forEach(r => { const k = String(r[0]); if (k && !(k in mapa)) { mapa[k] = r; ordem.push(k); } });
+      (d.convidados || []).forEach(x => {
+        const k = seguro_(x.codigo, 20);
+        if (!k) return;
+        if (!(k in mapa)) ordem.push(k);
+        mapa[k] = [k, seguro_(x.nome, 80), Number(x.lugares) || 1, seguro_(x.telefone, 20)];
+      });
+      if (ordem.length > MAX_CONVITES) return saida_({ erro: 'Limite de ' + MAX_CONVITES + ' convites' });
+      const l = [['Código', 'Nome', 'Lugares', 'Telefone']].concat(ordem.map(k => mapa[k]));
+      c.clearContents();
+      c.getRange(1, 1, l.length, 4).setValues(l);
+      return saida_({ ok: true, convidados: l.length - 1 });
+    }
+    const nome = String(d.nome || '').trim();
+    if (!nome) return saida_({ erro: 'Sem nome' });
+    const nomes = Array.isArray(d.names) ? d.names.slice(0, 20) : [];
+    const chave = String(d.code || nome).trim().toLowerCase().slice(0, 80);
+    const linha = [new Date(), seguro_(nome, 80), seguro_(d.code, 20), d.no ? 'Não' : 'Sim',
+      d.e1 && !d.no ? 'Sim' : '', d.e2 && !d.no ? 'Sim' : '', d.no ? 0 : 1 + nomes.length,
+      seguro_(nomes.join('; '), 400), seguro_(d.diet, 150), seguro_(d.note, 300), chave];
+    const s = aba_();
+    const v = s.getDataRange().getValues();
+    for (let i = v.length - 1; i >= 1; i--) {      // mesma chave: substitui a resposta anterior
+      if (v[i][10] === chave) { s.getRange(i + 1, 1, 1, linha.length).setValues([linha]); return saida_({ ok: true, atualizado: true }); }
+    }
+    if (v.length - 1 >= MAX_CONVITES) return saida_({ erro: 'Limite de convites atingido' });
+    s.appendRow(linha);
+    return saida_({ ok: true });
+  } catch (err) {
+    return saida_({ erro: 'Pedido inválido' });
+  } finally {
+    lock.releaseLock();
+  }
+}
+// Devolve as respostas ao painel (só com o PIN certo): ...?pin=SEU-PIN
+function doGet(e) {
+  if (PIN === 'TROQUE-ESTE-PIN' || (e.parameter.pin || '') !== PIN) return saida_({ erro: 'PIN incorreto' });
+  const v = aba_().getDataRange().getValues().slice(1);
+  const cs = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(ABA_CONV);
+  const conv = cs ? cs.getDataRange().getValues().slice(1).map(r => ({ codigo: String(r[0]), nome: String(r[1]), lugares: Number(r[2]) || 1, telefone: String(r[3]) })) : [];
+  return saida_({ convidados: conv, linhas: v.map(r => ({ em: r[0], nome: r[1], codigo: r[2], vai: r[3] === 'Sim', e1: r[4] === 'Sim',
+    e2: r[5] === 'Sim', pessoas: Number(r[6]) || 0, acomp: r[7], dieta: r[8], nota: r[9] })) });
+}
