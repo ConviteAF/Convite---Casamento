@@ -51,7 +51,14 @@ $('#go').onclick=()=>{
  const reg=$('#reg');
  if(!U)reg.textContent='';
  else if(!$('#pin').value)reg.textContent='Escreva o PIN para registar esta lista no painel dos noivos.';
- else fetch(U,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action:'lista',pin:$('#pin').value,convidados:conv})})
-  .then(()=>reg.textContent='Lista enviada ao painel ('+conv.length+' convites). Confira no painel.').catch(()=>reg.textContent='Não foi possível enviar a lista ao painel.')};
+ else{const pin=$('#pin').value;reg.textContent='A registar a lista no painel...';
+  fetch(U,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action:'lista',pin,convidados:conv})})
+  .then(()=>new Promise(r=>setTimeout(r,2500)))
+  .then(()=>fetch(U+'?pin='+encodeURIComponent(pin)+'&t='+Date.now()))
+  .then(r=>r.json()).then(j=>{
+   if(j.erro){reg.textContent='NÃO registado: '+j.erro+'. Confira o PIN.';return}
+   const cods=new Set((j.convidados||[]).map(c=>String(c.codigo)));const falta=conv.filter(c=>!cods.has(String(c.codigo))).length;
+   reg.textContent=falta?'ATENÇÃO: '+falta+' convites não ficaram registados. Atualize o script do Google (Nova versão) e tente de novo.':'Registado no painel: '+(j.convidados||[]).length+' convites no total (todos os nomes desta lista confirmados).'})
+  .catch(()=>reg.textContent='NÃO foi possível confirmar o registo. Verifique a internet e o script do Google.')}};
 $('#all').onclick=async()=>{try{await navigator.clipboard.writeText(all.join('\n'));$('#all').textContent='Copiado'}catch(e){}};
 </script></body></html>
