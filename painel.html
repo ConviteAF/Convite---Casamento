@@ -29,13 +29,15 @@ function analisar(j){
  const L=j.linhas||[],C=j.convidados||[],v=L.filter(x=>x.vai);
  const cods=new Set(L.map(x=>String(x.codigo||'').toLowerCase()).filter(Boolean)),nomes=new Set(L.map(x=>String(x.nome).toLowerCase()));
  const pend=C.filter(c=>!cods.has(String(c.codigo).toLowerCase())&&!nomes.has(String(c.nome).toLowerCase()));
+ const cc=new Set(C.map(c=>String(c.codigo).toLowerCase())),cn=new Set(C.map(c=>String(c.nome).toLowerCase()));
+ const extra=L.filter(x=>!cc.has(String(x.codigo||'').toLowerCase())&&!cn.has(String(x.nome).toLowerCase())).length;
  return {L,C,pend,
-  convites:C.length,respondidos:L.length,vao:v.length,nao:L.length-v.length,pendentes:C.length?pend.length:null,
+  convites:C.length+extra,respondidos:L.length,vao:v.length,nao:L.length-v.length,pendentes:C.length?pend.length:null,
   pessoas:v.reduce((a,x)=>a+x.pessoas,0),cer:v.filter(x=>x.e1).reduce((a,x)=>a+x.pessoas,0),copo:v.filter(x=>x.e2).reduce((a,x)=>a+x.pessoas,0),
   veg:L.filter(x=>/vegetar|vegan/i.test(x.dieta||'')).length,alerg:L.filter(x=>/alerg|gl[uú]ten|lact|amendoim|marisco/i.test(x.dieta||'')).length}}
 let PIN='',A=null,timer=null;
 function mostrar(j){A=analisar(j);
- const b=[['Convites registados',(A.convites||0)+' de 85'],['Responderam',A.respondidos],['Vão',A.vao],['Não vão',A.nao],['Pendentes',A.pendentes??'—'],['Pessoas confirmadas',A.pessoas+' de 170'],['Pessoas na cerimónia',A.cer],['Pessoas no copo de água',A.copo],['Vegetarianos',A.veg],['Com alergias',A.alerg]];
+ const b=[['Convites emitidos',(A.convites||0)+' de 85'],['Responderam',A.respondidos],['Vão',A.vao],['Não vão',A.nao],['Pendentes',A.pendentes??'—'],['Pessoas confirmadas',A.pessoas+' de 170'],['Pessoas na cerimónia',A.cer],['Pessoas no copo de água',A.copo],['Vegetarianos',A.veg],['Com alergias',A.alerg]];
  $('#st').innerHTML=b.map(([l,n])=>`<div><b>${n}</b>${l}</div>`).join('');
  const base=location.origin+location.pathname.replace(/[^/]*$/,'')+'convite.html';
  $('#pend').innerHTML=A.C.length?('<tr><th>Convidado</th><th>Lugares</th><th></th></tr>'+(A.pend.map(c=>{
