@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex">
+<title>Porta do salão</title>
+<style>
+body{font:17px/1.45 system-ui,sans-serif;max-width:700px;margin:0 auto;padding:.8rem;background:#EEF1EC;color:#1F2A24}h1{color:#5A1A2B;margin:.3rem 0;font-size:1.5rem}
+input,select{width:100%;padding:.7rem;border:1px solid #bbb;border-radius:10px;font:inherit;box-sizing:border-box}
+button{border:0;border-radius:999px;padding:.6rem 1.1rem;background:#9C7A3F;color:#fff;font:inherit;cursor:pointer;margin:.2rem .2rem 0 0}
+button.o{background:none;border:1.5px solid #9C7A3F;color:#7a5f2d}button.g{background:#1d6b3a}button.r{background:#9b2335}
+.hide{display:none}.tot{display:grid;grid-template-columns:repeat(3,1fr);gap:.5rem;margin:.6rem 0}.tot div{background:#fff;border-radius:10px;padding:.5rem;text-align:center;border:1px solid #d5dcd3}.tot b{display:block;font-size:1.7rem;color:#5A1A2B}
+.c{background:#fff;border:1px solid #d5dcd3;border-radius:12px;padding:.7rem;margin:.5rem 0}.c.in{background:#e3f3e8;border-color:#7cc294}
+.c b{font-size:1.1rem}small{color:#555}.st{font-weight:700}.ok{color:#1d6b3a}.no{color:#9b2335}
+.nf{background:#fde8ea;border:2px solid #9b2335;border-radius:12px;padding:.8rem;margin:.5rem 0;color:#7a1626}
+.tabs button{padding:.45rem .9rem}.tabs button.on{background:#5A1A2B}
+</style></head>
+<body>
+<h1>Porta do salão</h1>
+<div id="login"><p><label for="pin">PIN</label><input id="pin" type="password" autocomplete="off"></p><button id="go">Entrar</button><p id="msg" aria-live="polite"></p></div>
+<div id="main" class="hide">
+ <div class="tot"><div><b id="tEnt">0</b>Já entraram</div><div><b id="tFalta">0</b>Faltam</div><div><b id="tConf">0</b>Confirmados</div></div>
+ <input id="q" type="search" placeholder="Procurar pelo nome ou código…" autocomplete="off">
+ <div class="tabs"><button data-f="todos" class="on">Todos</button><button data-f="falta" class="o">Ainda não chegaram</button><button data-f="entrou" class="o">Já entraram</button><button id="rf" class="o">Atualizar</button></div>
+ <small id="upd"></small>
+ <div id="lista"></div>
+</div>
+<script src="config.js"></script>
+<script>
+const $=s=>document.querySelector(s);
+const U=typeof SCRIPT_URL==='string'?SCRIPT_URL:'';
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const norm=s=>String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().trim();
+let PIN='',D=null,filtro='todos',timer=null,pausa=0;
+const chaveDe=x=>String(x.codigo||x.nome).trim().toLowerCase();
+function modelo(){
+ const ent=new Map((D.entradas||[]).map(e=>[e.chave,e]));
+ return (D.linhas||[]).filter(x=>x.vai).map(x=>{const k=chaveDe(x),e=ent.get(k);
+  return {k,nome:x.nome,codigo:x.codigo,max:Math.max(1,Math.min(2,x.pessoas||1)),acomp:x.acomp,entrou:!!(e&&e.entrou),n:e&&e.entrou?e.pessoas:0}})}
+function mostrar(){
+ const L=modelo(),q=norm($('#q').value);
+ const conf=L.reduce((a,x)=>a+x.max,0),dentro=L.reduce((a,x)=>a+x.n,0);
+ $('#tEnt').textContent=dentro;$('#tConf').textContent=conf;$('#tFalta').textContent=Math.max(0,conf-dentro);
+ let v=L.filter(x=>filtro==='todos'||(filtro==='entrou'?x.entrou:!x.entrou));
+ if(q)v=v.filter(x=>norm(x.nome).includes(q)||norm(x.codigo).includes(q)||norm(x.acomp).includes(q));
+ v.sort((a,b)=>a.nome.localeCompare(b.nome,'pt'));
+ let h='';
+ if(q&&!L.some(x=>norm(x.nome).includes(q)||norm(x.codigo).includes(q)||norm(x.acomp).includes(q)))
+  h+='<div class="nf"><b>Sem confirmação.</b> Este nome não está na lista de confirmados. Não deve entrar sem convite confirmado.</div>';
+ h+=v.map(x=>{const opts=x.max===2?'<select data-k="'+esc(x.k)+'" class="np" aria-label="Quantas pessoas entraram"><option value="2"'+(x.n!==1?' selected':'')+'>2 pessoas</option><option value="1"'+(x.n===1?' selected':'')+'>1 pessoa</option></select>':'';
+  return `<div class="c ${x.entrou?'in':''}"><b>${esc(x.nome)}</b> <small>(${esc(x.codigo||'')})</small><br>
+  <small>Convite para ${x.max} ${x.max>1?'pessoas':'pessoa'}${x.acomp?' · '+esc(x.acomp):''}</small><br>
+  ${x.entrou?`<span class="st ok">Entrou (${x.n})</span> <button class="r o" data-a="sai" data-k="${esc(x.k)}">Anular entrada</button>`:`${opts}<button class="g" data-a="ent" data-k="${esc(x.k)}">Registar entrada</button>`}</div>`}).join('')
+  ||(q?'':'<p>Nenhum convidado nesta lista.</p>');
+ $('#lista').innerHTML=h;
+ $('#upd').textContent='Atualizado às '+new Date().toLocaleTimeString('pt-PT')}
+async function carregar(){
+ const r=await fetch(U+'?pin='+encodeURIComponent(PIN)+'&t='+Date.now());const j=await r.json();if(j.erro)throw new Error(j.erro);D=j;mostrar()}
+async function enviar(k,entrou,n){
+ const x=modelo().find(m=>m.k===k);if(!x)return;
+ const e=(D.entradas||[]).filter(e=>e.chave!==k);e.push({chave:k,nome:x.nome,pessoas:n,entrou});D.entradas=e;pausa=Date.now()+8000;mostrar();
+ try{await fetch(U,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action:'entrada',pin:PIN,chave:k,nome:x.nome,pessoas:n,entrou})});
+  setTimeout(()=>carregar().catch(()=>{}),2500)}catch(err){$('#upd').textContent='Sem ligação: a entrada pode não ter ficado guardada.'}}
+$('#lista').addEventListener('click',ev=>{
+ const b=ev.target.closest('button[data-a]');if(!b)return;const k=b.dataset.k;
+ if(b.dataset.a==='ent'){const s=b.parentNode.querySelector('select.np');enviar(k,true,s?Number(s.value):1)}
+ else enviar(k,false,0)});
+$('#q').oninput=mostrar;
+document.querySelectorAll('.tabs button[data-f]').forEach(b=>b.onclick=()=>{filtro=b.dataset.f;document.querySelectorAll('.tabs button[data-f]').forEach(x=>x.className=x===b?'on':'o');mostrar()});
+$('#rf').onclick=()=>carregar().catch(()=>{$('#upd').textContent='Falhou a atualização.'});
+$('#go').onclick=async()=>{PIN=$('#pin').value;const m=$('#msg');
+ if(!U)return m.textContent='A ligação à folha do Google não está configurada (config.js).';
+ m.textContent='A carregar...';
+ try{await carregar();$('#login').classList.add('hide');$('#main').classList.remove('hide');
+  timer=setInterval(()=>{if(Date.now()>pausa&&document.activeElement!==$('#q'))carregar().catch(()=>{})},20000)}
+ catch(e){m.textContent='PIN incorreto ou sem ligação.'}};
+$('#pin').onkeydown=e=>{if(e.key==='Enter')$('#go').click()};
+</script></body></html>
