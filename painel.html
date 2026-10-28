@@ -17,6 +17,7 @@ table{width:100%;border-collapse:collapse;background:#fff;font-size:.9rem}th,td{
  <button id="rf">Atualizar</button><button class="o" id="csv">Descarregar respostas (CSV)</button> <small id="upd"></small>
  <div class="st" id="st"></div>
  <h2>Lista completa de convidados</h2><div class="w"><table id="todos"></table></div>
+ <div id="revbox"></div>
  <h2>Pendentes (ainda não responderam)</h2><div class="w"><table id="pend"></table></div>
  <h2>Respostas</h2><div class="w"><table id="resp"></table></div>
 </div>
@@ -30,8 +31,10 @@ function analisar(j){
  const cods=new Set(L.map(x=>String(x.codigo||'').toLowerCase()).filter(Boolean)),nomes=new Set(L.map(x=>String(x.nome).toLowerCase()));
  const pend=C.filter(c=>!cods.has(String(c.codigo).toLowerCase())&&!nomes.has(String(c.nome).toLowerCase()));
  const cc=new Set(C.map(c=>String(c.codigo).toLowerCase())),cn=new Set(C.map(c=>String(c.nome).toLowerCase()));
+ const rev=L.filter(x=>x.vai&&(x.pessoas||0)<2).map(x=>{const c=C.find(c=>String(c.codigo).toLowerCase()===String(x.codigo||'').toLowerCase()||String(c.nome).toLowerCase()===String(x.nome).toLowerCase());
+  return {x,c,dois:(c&&c.lugares>=2)||(!c&&/\be\s+(esposa|esposo|acompanhante|marido|mulher|fam[ií]lia|filh)/i.test(x.nome))}}).filter(r=>r.dois);
  const extra=L.filter(x=>!cc.has(String(x.codigo||'').toLowerCase())&&!cn.has(String(x.nome).toLowerCase())).length;
- return {L,C,pend,
+ return {L,C,pend,rev,
   convites:C.length+extra,respondidos:L.length,vao:v.length,nao:L.length-v.length,pendentes:C.length?pend.length:null,
   pessoas:v.reduce((a,x)=>a+x.pessoas,0),cer:v.filter(x=>x.e1).reduce((a,x)=>a+x.pessoas,0),copo:v.filter(x=>x.e2).reduce((a,x)=>a+x.pessoas,0),
   veg:L.filter(x=>/vegetar|vegan/i.test(x.dieta||'')).length,alerg:L.filter(x=>/alerg|gl[uú]ten|lact|amendoim|marisco/i.test(x.dieta||'')).length}}
@@ -51,6 +54,8 @@ function mostrar(j){A=analisar(j);
  const linhasT=A.C.map(c=>{const r=rc.get(String(c.codigo).toLowerCase())||rn.get(String(c.nome).toLowerCase());if(r)usados.add(r);return `<tr><td>${esc(c.nome)}</td><td>${esc(c.lugares)}</td><td>${est(r)}</td></tr>`});
  A.L.filter(r=>!usados.has(r)).forEach(r=>linhasT.push(`<tr><td>${esc(r.nome)} <small>(fora da lista)</small></td><td></td><td>${est(r)}</td></tr>`));
  $('#todos').innerHTML='<tr><th>Convidado</th><th>Lugares</th><th>Estado</th></tr>'+(linhasT.join('')||'<tr><td colspan="3">Ainda sem convidados.</td></tr>');
+ $('#revbox').innerHTML=A.rev.length?('<h2>A rever: convite de 2 pessoas, mas confirmou só 1 ('+A.rev.length+')</h2><div class="w"><table><tr><th>Convidado</th><th>Confirmou</th><th></th></tr>'+A.rev.map(r=>{const tel=r.c&&r.c.telefone;const t=`Olá ${r.x.nome}! Na sua confirmação do casamento de Agnaldo e Fátima ficou registada apenas 1 pessoa. O seu convite é para 2. Vai com acompanhante? Abra o seu link e confirme de novo, por favor.`;
+  return `<tr><td>${esc(r.x.nome)}</td><td>${r.x.pessoas} pessoa</td><td>${tel?`<a class="b" target="_blank" rel="noopener" href="https://wa.me/${esc(tel)}?text=${encodeURIComponent(t)}">Perguntar</a>`:''}</td></tr>`}).join('')+'</table></div>'):'';
  $('#resp').innerHTML='<tr><th>Nome</th><th>Estado</th><th>Pessoas</th><th>Cerimónia</th><th>Copo de água</th><th>Acompanhantes</th><th>Restrições / mensagem</th></tr>'+
   (A.L.map(x=>`<tr><td>${esc(x.nome)}</td><td class="${x.vai?'ok':'no'}">${x.vai?'Vai':'Não vai'}</td><td>${x.pessoas}</td><td>${x.e1?'Sim':''}</td><td>${x.e2?'Sim':''}</td><td>${esc(x.acomp)}</td><td>${esc(x.dieta)}${x.dieta&&x.nota?' · ':''}${esc(x.nota)}</td></tr>`).join('')||'<tr><td colspan="7">Ainda sem respostas.</td></tr>');
  $('#upd').textContent='Atualizado às '+new Date().toLocaleTimeString('pt-PT')}
