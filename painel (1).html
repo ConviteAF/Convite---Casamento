@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex">
+<title>Painel dos noivos</title>
+<style>
+body{font:16px/1.5 system-ui,sans-serif;max-width:900px;margin:0 auto;padding:1rem;background:#EEF1EC;color:#1F2A24}h1,h2{color:#5A1A2B;margin:.4rem 0}
+input{padding:.6rem;border:1px solid #bbb;border-radius:8px;font:inherit}
+button,a.b{display:inline-block;border:0;border-radius:999px;padding:.5rem 1rem;background:#9C7A3F;color:#fff;font:inherit;text-decoration:none;cursor:pointer;margin:.2rem .2rem 0 0}button.o{background:none;border:1.5px solid #9C7A3F;color:#7a5f2d}
+.st{display:grid;grid-template-columns:repeat(auto-fit,minmax(135px,1fr));gap:.6rem;margin:1rem 0}.st div{background:#fff;border-radius:10px;padding:.7rem;text-align:center;border:1px solid #d5dcd3}.st b{display:block;font-size:1.9rem;color:#5A1A2B}
+table{width:100%;border-collapse:collapse;background:#fff;font-size:.9rem}th,td{text-align:left;padding:.45rem;border-bottom:1px solid #d5dcd3;vertical-align:top}.w{overflow-x:auto}
+.hide{display:none}.ok{color:#1d6b3a}.no{color:#9b2335}small{color:#555}
+</style></head>
+<body>
+<h1>Painel dos noivos</h1>
+<div id="login"><p><label for="pin">PIN</label><br><input id="pin" type="password" autocomplete="off"> <button id="go">Entrar</button></p><p id="msg" aria-live="polite"></p></div>
+<div id="main" class="hide">
+ <button id="rf">Atualizar</button><button class="o" id="csv">Descarregar respostas (CSV)</button> <small id="upd"></small>
+ <div class="st" id="st"></div>
+ <h2>Lista completa de convidados</h2><div class="w"><table id="todos"></table></div>
+ <div id="revbox"></div>
+ <h2>Pendentes (ainda não responderam)</h2><div class="w"><table id="pend"></table></div>
+ <h2>Respostas</h2><div class="w"><table id="resp"></table></div>
+</div>
+<script src="config.js"></script>
+<script>
+const $=s=>document.querySelector(s);
+const U=typeof SCRIPT_URL==='string'?SCRIPT_URL:'';
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function analisar(j){
+ const L=j.linhas||[],C=j.convidados||[],v=L.filter(x=>x.vai);
+ const cods=new Set(L.map(x=>String(x.codigo||'').toLowerCase()).filter(Boolean)),nomes=new Set(L.map(x=>String(x.nome).toLowerCase()));
+ const pend=C.filter(c=>!cods.has(String(c.codigo).toLowerCase())&&!nomes.has(String(c.nome).toLowerCase()));
+ const cc=new Set(C.map(c=>String(c.codigo).toLowerCase())),cn=new Set(C.map(c=>String(c.nome).toLowerCase()));
+ const rev=L.filter(x=>x.vai&&(x.pessoas||0)<2).map(x=>{const c=C.find(c=>String(c.codigo).toLowerCase()===String(x.codigo||'').toLowerCase()||String(c.nome).toLowerCase()===String(x.nome).toLowerCase());
+  return {x,c,dois:(c&&c.lugares>=2)||(!c&&/\be\s+(esposa|esposo|acompanhante|marido|mulher|fam[ií]lia|filh)/i.test(x.nome))}}).filter(r=>r.dois);
+ const extra=L.filter(x=>!cc.has(String(x.codigo||'').toLowerCase())&&!cn.has(String(x.nome).toLowerCase())).length;
+ return {L,C,pend,rev,
+  convites:C.length+extra,respondidos:L.length,vao:v.length,nao:L.length-v.length,pendentes:C.length?pend.length:null,
+  pessoas:v.reduce((a,x)=>a+x.pessoas,0),cer:v.filter(x=>x.e1).reduce((a,x)=>a+x.pessoas,0),copo:v.filter(x=>x.e2).reduce((a,x)=>a+x.pessoas,0),
+  veg:L.filter(x=>/vegetar|vegan/i.test(x.dieta||'')).length,alerg:L.filter(x=>/alerg|gl[uú]ten|lact|amendoim|marisco/i.test(x.dieta||'')).length}}
+let PIN='',A=null,timer=null;
+function mostrar(j){A=analisar(j);
+ const b=[['Convites emitidos',(A.convites||0)+' de 85'],['Responderam',A.respondidos],['Vão',A.vao],['Não vão',A.nao],['Pendentes',A.pendentes??'—'],['Pessoas confirmadas',A.pessoas+' de 170'],['Pessoas na cerimónia',A.cer],['Pessoas no copo de água',A.copo],['Vegetarianos',A.veg],['Com alergias',A.alerg]];
+ $('#st').innerHTML=b.map(([l,n])=>`<div><b>${n}</b>${l}</div>`).join('');
+ const base=location.origin+location.pathname.replace(/[^/]*$/,'')+'convite.html';
+ $('#pend').innerHTML=A.C.length?('<tr><th>Convidado</th><th>Lugares</th><th></th></tr>'+(A.pend.map(c=>{
+   const link=base+'?n='+encodeURIComponent(c.nome)+'&l='+c.lugares+'&c='+c.codigo;
+   const t=`Olá ${c.nome}! Ainda não recebemos a sua resposta ao convite para o casamento de Agnaldo e Fátima (31 de outubro, 12:00). Confirme aqui: ${link}`;
+   return `<tr><td>${esc(c.nome)}</td><td>${esc(c.lugares)}</td><td><a class="b" target="_blank" rel="noopener" href="https://wa.me/${esc(c.telefone)}?text=${encodeURIComponent(t)}">Lembrar</a></td></tr>`}).join('')||'<tr><td colspan="3">Todos já responderam.</td></tr>'))
+  :'<tr><td>Registe a lista no gerador de links (com o PIN) para ver os pendentes.</td></tr>';
+ const rc=new Map(),rn=new Map();A.L.forEach(x=>{if(x.codigo)rc.set(String(x.codigo).toLowerCase(),x);rn.set(String(x.nome).toLowerCase(),x)});
+ const est=r=>r?(r.vai?'<span class="ok">Vai ('+r.pessoas+')</span>':'<span class="no">Não vai</span>'):'<span>Pendente</span>';
+ const usados=new Set();
+ const linhasT=A.C.map(c=>{const r=rc.get(String(c.codigo).toLowerCase())||rn.get(String(c.nome).toLowerCase());if(r)usados.add(r);return `<tr><td>${esc(c.nome)}</td><td>${esc(c.lugares)}</td><td>${est(r)}</td></tr>`});
+ A.L.filter(r=>!usados.has(r)).forEach(r=>linhasT.push(`<tr><td>${esc(r.nome)} <small>(fora da lista)</small></td><td></td><td>${est(r)}</td></tr>`));
+ $('#todos').innerHTML='<tr><th>Convidado</th><th>Lugares</th><th>Estado</th></tr>'+(linhasT.join('')||'<tr><td colspan="3">Ainda sem convidados.</td></tr>');
+ $('#revbox').innerHTML=A.rev.length?('<h2>A rever: convite de 2 pessoas, mas confirmou só 1 ('+A.rev.length+')</h2><div class="w"><table><tr><th>Convidado</th><th>Confirmou</th><th></th></tr>'+A.rev.map(r=>{const tel=r.c&&r.c.telefone;const t=`Olá ${r.x.nome}! Na sua confirmação do casamento de Agnaldo e Fátima ficou registada apenas 1 pessoa. O seu convite é para 2. Vai com acompanhante? Abra o seu link e confirme de novo, por favor.`;
+  return `<tr><td>${esc(r.x.nome)}</td><td>${r.x.pessoas} pessoa</td><td>${tel?`<a class="b" target="_blank" rel="noopener" href="https://wa.me/${esc(tel)}?text=${encodeURIComponent(t)}">Perguntar</a>`:''}</td></tr>`}).join('')+'</table></div>'):'';
+ $('#resp').innerHTML='<tr><th>Nome</th><th>Estado</th><th>Pessoas</th><th>Cerimónia</th><th>Copo de água</th><th>Acompanhantes</th><th>Restrições / mensagem</th></tr>'+
+  (A.L.map(x=>`<tr><td>${esc(x.nome)}</td><td class="${x.vai?'ok':'no'}">${x.vai?'Vai':'Não vai'}</td><td>${x.pessoas}</td><td>${x.e1?'Sim':''}</td><td>${x.e2?'Sim':''}</td><td>${esc(x.acomp)}</td><td>${esc(x.dieta)}${x.dieta&&x.nota?' · ':''}${esc(x.nota)}</td></tr>`).join('')||'<tr><td colspan="7">Ainda sem respostas.</td></tr>');
+ $('#upd').textContent='Atualizado às '+new Date().toLocaleTimeString('pt-PT')}
+async function carregar(){
+ const r=await fetch(U+'?pin='+encodeURIComponent(PIN));const j=await r.json();if(j.erro)throw new Error(j.erro);mostrar(j)}
+$('#go').onclick=async()=>{PIN=$('#pin').value;const m=$('#msg');
+ if(!U)return m.textContent='A ligação à folha do Google ainda não foi configurada (ficheiro config.js).';
+ m.textContent='A carregar...';
+ try{await carregar();$('#login').classList.add('hide');$('#main').classList.remove('hide');timer=setInterval(()=>carregar().catch(()=>{}),60000)}
+ catch(e){m.textContent='PIN incorreto ou sem ligação.'}};
+$('#pin').onkeydown=e=>{if(e.key==='Enter')$('#go').click()};
+$('#rf').onclick=()=>carregar().catch(()=>{$('#upd').textContent='Falhou a atualização.'});
+$('#csv').onclick=()=>{if(!A)return;const q=v=>'"'+String(v??'').replace(/"/g,'""')+'"';
+ const rows=[['nome','estado','pessoas','cerimonia','copo_de_agua','acompanhantes','restricoes','mensagem'],...A.L.map(x=>[x.nome,x.vai?'vai':'nao vai',x.pessoas,x.e1?'sim':'',x.e2?'sim':'',x.acomp,x.dieta,x.nota])];
+ const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['\ufeff'+rows.map(r=>r.map(q).join(',')).join('\n')],{type:'text/csv'}));a.download='respostas.csv';a.click()};
+</script></body></html>
